@@ -54,3 +54,7 @@ this is sample json response
 # Rewards_App
 # Rewards_App
 # Rewards_App
+
+
+Rewards_App where customer gets 2 points for each dollar  spends over $100 and 1 point for $50 in each transaction.
+Calculating the rewards for each customer per month for 3 month period which includes all transactions.
