@@ -2,14 +2,12 @@ package com.example.service;
 
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import com.example.model.repository.CustomerRepository;
+import com.example.model.repository.TransactionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.model.Customer;
@@ -17,34 +15,37 @@ import com.example.model.MonthlyRewards;
 import com.example.model.RewardPointsRequest;
 import com.example.model.RewardsSummary;
 import com.example.model.Transaction;
-import com.example.model.TransactionList;
-
 @Service
 public class RewardPointsService {
 
-	public List<RewardsSummary> calculateRewardPoints(RewardPointsRequest request) {
+	@Autowired
+	private CustomerRepository customerRepository;
+	@Autowired
+	private TransactionRepository transactionRepository;
+	@Autowired
+	private Transformer transformer;
 
-		TransactionList list = new TransactionList();
-		Map<Integer, List<Transaction>> customerTList = mapToCustomer(list.getTransactions());
+	public  Transaction calculateRewardPoints(RewardPointsRequest request) {
 
+		Customer customer= customerRepository.findByCustomerId(request.getCustomerId());
 		List<RewardsSummary> rewardsSummaries = new ArrayList<>();
+		Transaction transaction= transformer.addTransaction(request.getAmount(),request.getCustomerId(),request.getTransactionDate());
 
-		for (Map.Entry<Integer, List<Transaction>> t : customerTList.entrySet()) {
-			Customer customer = Customer.getCustomerById(t.getKey());
-			if (customer != null) {
-				RewardsSummary summary = new RewardsSummary();
-				summary.setCustomerName(customer.getCustomerName());
-				summary.setRewardsPerMonth(rewardsPerMonth(t.getValue(), request.getTimePeriod()));
-				summary.setTotalRewardsEarned(getTotalRewardsEarned(summary.getRewardsPerMonth()));
-				rewardsSummaries.add(summary);
-			}
+		transaction= transactionRepository.save(transaction);
+		if (customer!=null) {
+			RewardsSummary summary = new RewardsSummary();
+			summary.setCustomerName(customer.getCustomerName());
+			summary.setRewardsPerMonth(rewardsPerMonth(Arrays.asList(transaction), request.getTimePeriod()));
+			summary.setTotalRewardsEarned(getTotalRewardsEarned(summary.getRewardsPerMonth()));
+			rewardsSummaries.add(summary);
 		}
-		return rewardsSummaries;
+
+		return transaction;
 	}
 
-	private Map<Integer, List<Transaction>> mapToCustomer(List<Transaction> tList) {
+	private Map<Long, List<Transaction>> mapToCustomer(List<Transaction> tList) {
 
-		Map<Integer, List<Transaction>> keyMap = new HashMap<>();
+		Map<Long, List<Transaction>> keyMap = new HashMap<>();
 
 		for (Transaction t : tList) {
 			List<Transaction> list = keyMap.get(t.getCustomerid());
@@ -96,4 +97,21 @@ public class RewardPointsService {
 		return totalrewards;
 	}
 
+	public RewardsSummary getRewardsByCustomerId(Long customerId) {
+		Customer customer = customerRepository.findByCustomerId(customerId);
+		if(customer == null)
+		{
+			throw new RuntimeException("Invalid / Missing customer Id ");
+		}
+		List<Transaction> transactions = transactionRepository.findAllByCustomerid(customerId);
+		RewardsSummary rewardsSummary= new RewardsSummary();
+		rewardsSummary.setCustomerName(customer.getCustomerName());
+		rewardsSummary.setRewardsPerMonth(transactions.stream().map(transaction -> {
+			MonthlyRewards monthlyRewards= new MonthlyRewards();
+			monthlyRewards.setMonth(transaction.getTransactionDate().getMonth().name());
+			monthlyRewards.setRewards(transaction.getRewards());
+			return monthlyRewards;
+		}).collect(Collectors.toList()));
+          return rewardsSummary;
+	}
 }

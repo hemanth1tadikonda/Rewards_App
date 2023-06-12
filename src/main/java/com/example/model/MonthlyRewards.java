@@ -1,24 +1,15 @@
 package com.example.model;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+
+@Data
 public class MonthlyRewards {
 
-	private String month;
-	private int rewards;
+    private String month;
+    private Integer rewards;
 
-	public String getMonth() {
-		return month;
-	}
-
-	public void setMonth(String month) {
-		this.month = month;
-	}
-
-	public int getRewards() {
-		return rewards;
-	}
-
-	public void setRewards(int rewards) {
-		this.rewards = rewards;
-	}
 
 }
